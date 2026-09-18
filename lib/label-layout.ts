@@ -39,6 +39,15 @@ export interface SheetSpec {
   /** Marges imposées, si le support n'est pas centré sur la page. */
   marginLeftMm?: number;
   marginTopMm?: number;
+  /** Où se procurer le support, affiché dans la fiche de la planche. */
+  purchase?: PurchaseLink;
+}
+
+export interface PurchaseLink {
+  /** URL absolue et https d'une page marchande. */
+  url: string;
+  /** Marchand et référence vendue, ex. « Amazon.fr — Agipa 102199 ». */
+  label: string;
 }
 
 /**
@@ -64,6 +73,11 @@ export const APLI_118990: SheetSpec = {
   rows: 13,
   columnPitchMm: 38,
   rowPitchMm: 21.2,
+  purchase: {
+    // Même matrice 65 × 38 × 21,2 mm, vendue sous la référence Agipa 102199.
+    url: "https://www.amazon.fr/Agipa-102199-Etiquettes-multi-arrondis/dp/B07DYC21JD/",
+    label: "Amazon.fr — Agipa 102199",
+  },
 };
 
 export const SHEET_SPECS: readonly SheetSpec[] = [APLI_118990];

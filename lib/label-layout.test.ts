@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   A4_MM,
   APLI_118990,
+  SHEET_SPECS,
   labelSlot,
   labelsPerSheet,
   mmToPt,
@@ -116,4 +117,42 @@ describe("planche Apli 118990", () => {
     expect(() => labelSlot(spec, -1)).toThrow(RangeError);
     expect(() => labelSlot(spec, 1.5)).toThrow(RangeError);
   });
+});
+
+/**
+ * Contrôles valables pour **tout** format ajouté au catalogue : une planche qui
+ * ne tient pas dans une A4, ou dont le lien d'achat est mal formé, échoue ici
+ * avant d'arriver dans l'UI.
+ */
+describe("catalogue des planches", () => {
+  it("n'est pas vide et n'a pas d'identifiant en double", () => {
+    expect(SHEET_SPECS.length).toBeGreaterThan(0);
+    const ids = SHEET_SPECS.map((sheet) => sheet.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it.each(SHEET_SPECS.map((sheet) => [sheet.id, sheet] as const))(
+    "%s tient dans une A4 et se pose du haut vers le bas",
+    (_id, sheet) => {
+      expect(sheetFitReport(sheet).fits).toBe(true);
+      // Le pas ne peut pas être plus petit que l'étiquette (chevauchement).
+      expect(sheet.columnPitchMm).toBeGreaterThanOrEqual(sheet.labelWidthMm);
+      expect(sheet.rowPitchMm).toBeGreaterThanOrEqual(sheet.labelHeightMm);
+      const last = labelSlot(sheet, labelsPerSheet(sheet) - 1);
+      expect(last.xMm + last.widthMm).toBeLessThanOrEqual(A4_MM.widthMm);
+      expect(last.yMm + last.heightMm).toBeLessThanOrEqual(A4_MM.heightMm);
+    },
+  );
+
+  it.each(SHEET_SPECS.map((sheet) => [sheet.id, sheet] as const))(
+    "%s pointe vers une page marchande en https",
+    (_id, sheet) => {
+      expect(sheet.purchase).toBeDefined();
+      const purchase = sheet.purchase!;
+      expect(purchase.label.trim().length).toBeGreaterThan(0);
+      const url = new URL(purchase.url);
+      expect(url.protocol).toBe("https:");
+      expect(url.hostname).not.toBe("");
+    },
+  );
 });

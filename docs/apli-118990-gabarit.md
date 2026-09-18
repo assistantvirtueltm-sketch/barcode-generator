@@ -34,6 +34,16 @@ mêmes étiquettes 38 × 21,2 mm mais avec un pas de 40,6 mm (gouttières de
 2,6 mm) : ce pas décale les colonnes extérieures de plus de 5 mm et les fait
 déborder du support.
 
+## Références commerciales
+
+La même matrice (65 étiquettes de 38 × 21,2 mm) est vendue sous plusieurs
+références selon le conditionnement et la finition des coins : le gabarit ci-joint
+est celui de la réf. **118990** (coins droits), tandis que le lien d'achat
+enregistré dans `APLI_118990.purchase` pointe la réf. **Agipa 102199**. Les cotes
+de la matrice sont identiques ; seule la finition des coins diffère, ce qui
+n'affecte pas le positionnement. Vérifier ce point sur la fiche produit avant
+d'ajouter une nouvelle référence.
+
 ## Relire le gabarit
 
 LibreOffice refuse ce fichier ; les cotes se relisent directement dans les flux

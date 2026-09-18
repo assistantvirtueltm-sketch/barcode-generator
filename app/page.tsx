@@ -12,14 +12,10 @@ import { LabelPreview } from "@/components/LabelPreview";
 import { ProductForm, type ProductDraft } from "@/components/ProductForm";
 import { ProductList } from "@/components/ProductList";
 import { SheetMap } from "@/components/SheetMap";
+import { SheetSpecCard } from "@/components/SheetSpecCard";
 import { barPattern } from "@/lib/barcode-modules";
 import { downloadJson, downloadPdf } from "@/lib/download";
-import {
-  APLI_118990,
-  labelsPerSheet,
-  sheetGapsMm,
-  sheetMarginsMm,
-} from "@/lib/label-layout";
+import { APLI_118990, labelsPerSheet } from "@/lib/label-layout";
 import { buildLabelContent, type MeasureText } from "@/lib/label-render";
 import {
   acknowledgeLibraryNotice,
@@ -225,8 +221,6 @@ export default function Page() {
     });
   }
 
-  const margins = sheetMarginsMm(SPEC);
-  const gaps = sheetGapsMm(SPEC);
   const products = library.products;
   const notice =
     storeError ??
@@ -241,10 +235,7 @@ export default function Page() {
           Planches d&apos;étiquettes codes-barres
         </h1>
         <p className="mt-1 text-sm text-stone-600">
-          {SPEC.reference} — {SPEC.name} · pas {SPEC.columnPitchMm} ×{" "}
-          {SPEC.rowPitchMm} mm · marges {margins.leftMm.toFixed(1)} /{" "}
-          {margins.topMm.toFixed(1)} mm · gouttières{" "}
-          {gaps.columnGapMm.toFixed(1)} / {gaps.rowGapMm.toFixed(1)} mm
+          {SPEC.reference} — {SPEC.name}
         </p>
       </header>
 
@@ -374,6 +365,8 @@ export default function Page() {
         </div>
 
         <aside className="space-y-6">
+          <SheetSpecCard spec={SPEC} />
+
           <section className="rounded-lg border border-stone-200 bg-white p-5 shadow-xs">
             <h2 className="mb-4 text-sm font-semibold tracking-wide text-stone-500 uppercase">
               Planche

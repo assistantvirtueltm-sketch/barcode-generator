@@ -58,6 +58,12 @@ saisie ──▶ symbology.ts       validation / détection du type / clé de co
   déduire d'un autre support au même format (la matrice Avery L7651 a le même
   38 × 21,2 mm mais un pas de 40,6 mm, ce qui fait déborder les colonnes
   extérieures de 5 mm).
+- Ajouter un format de planche = ajouter une `SheetSpec` à `SHEET_SPECS`
+  (cotes relevées sur le gabarit du fabricant, plus un `purchase` — lien
+  marchand https + référence vendue). `components/SheetSpecCard.tsx` en dérive
+  la fiche du support et le bouton d'achat, sans code par format ; les tests
+  `catalogue des planches` s'appliquent automatiquement au nouveau format.
+  Tant que l'UI ne propose qu'un format, `app/page.tsx` fixe `SPEC`.
 - `lib/barcode-modules.ts` — n'utilise **que** `bwipjs.raw()` (sous-chemin
   `bwip-js/browser`) : `sbs` est la suite des largeurs en modules commençant par
   une barre. On ne charge aucune police bwip-js et on ne rastérise rien.
