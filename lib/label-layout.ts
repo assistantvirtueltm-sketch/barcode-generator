@@ -44,10 +44,15 @@ export interface SheetSpec {
 /**
  * Apli / Agipa réf. 118990 — 65 étiquettes de 38 × 21,2 mm par feuille A4.
  *
- * Pas de 40,6 × 21,2 mm (matrice identique aux planches Avery L7651). Le
- * centrage redonne exactement la marge haute de 10,7 mm publiée par le
- * fabricant, ce qui confirme que la matrice est centrée sur la feuille ;
- * la gouttière horizontale qui en résulte est de 2,6 mm et la verticale nulle.
+ * Cotes relevées dans le gabarit Word du fabricant
+ * (`docs/apli-118990-gabarit.doc`, cf. `docs/apli-118990-gabarit.md`) :
+ * les étiquettes sont **jointives**, sans aucune gouttière, et la matrice de
+ * 190 × 275,6 mm est centrée sur la feuille — ce qui redonne exactement les
+ * marges du gabarit, 10,0 mm à gauche et 10,707 mm en haut.
+ *
+ * Ne pas confondre avec la matrice Avery L7651 (même 38 × 21,2 mm, mais pas de
+ * 40,6 mm avec gouttières de 2,6 mm) : ce pas décale les colonnes extérieures
+ * de 5 mm et les fait déborder du support.
  */
 export const APLI_118990: SheetSpec = {
   id: "apli-118990",
@@ -57,7 +62,7 @@ export const APLI_118990: SheetSpec = {
   labelHeightMm: 21.2,
   columns: 5,
   rows: 13,
-  columnPitchMm: 40.6,
+  columnPitchMm: 38,
   rowPitchMm: 21.2,
 };
 

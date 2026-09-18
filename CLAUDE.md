@@ -51,9 +51,13 @@ saisie ──▶ symbology.ts       validation / détection du type / clé de co
   être écrite en dur ailleurs. Une planche est décrite par son **pas** (cote du
   massicot), pas par sa gouttière, et la matrice est **centrée** sur la page :
   les marges sont donc calculées (`sheetMarginsMm`), pas saisies. Pour la
-  118990 : 38 × 21,2 mm, pas 40,6 × 21,2 mm, marges 4,8 / 10,7 mm, gouttières
-  2,6 / 0 mm. La marge haute publiée par le fabricant (10,7 mm) tombe
-  exactement — c'est le contrôle qui valide le modèle.
+  118990 : étiquette 38 × 21,2 mm, pas 38 × 21,2 mm (**étiquettes jointives,
+  aucune gouttière**), matrice 190 × 275,6 mm, marges calculées 10,0 / 10,7 mm.
+  Les cotes viennent du gabarit du fabricant, relevé dans
+  `docs/apli-118990-gabarit.md` — la seule source autoritaire ; ne pas les
+  déduire d'un autre support au même format (la matrice Avery L7651 a le même
+  38 × 21,2 mm mais un pas de 40,6 mm, ce qui fait déborder les colonnes
+  extérieures de 5 mm).
 - `lib/barcode-modules.ts` — n'utilise **que** `bwipjs.raw()` (sous-chemin
   `bwip-js/browser`) : `sbs` est la suite des largeurs en modules commençant par
   une barre. On ne charge aucune police bwip-js et on ne rastérise rien.
@@ -81,6 +85,11 @@ saisie ──▶ symbology.ts       validation / détection du type / clé de co
   prédécoupé, toute encre hors zone est visible sur la planche.
 - Toute modification des cotes ou du rendu se vérifie sur un PDF réellement
   généré (le mesurer), pas seulement à la lecture du diff.
+- Les cotes de planche sont figées par deux tests de `lib/label-layout.test.ts` :
+  `retrouve les cotes du gabarit du fabricant` et `colle aux bornes en twips du
+  gabarit`, qui comparent les emplacements calculés aux valeurs brutes du
+  gabarit Word. Les mettre à jour demande de relire le gabarit, pas d'ajuster la
+  valeur attendue.
 - `lib/barcode-decode.test.ts` est le garde-fou central : il reconstruit la
   trame de modules depuis les rectangles millimétrés puis **décode** le résultat
   avec les tables EAN normatives. Un changement de mise en page qui casse la
