@@ -61,7 +61,7 @@ export function ProductList({
                 disabled={!resolution.ok}
                 className="rounded-md bg-stone-900 px-3 py-1.5 text-xs font-medium text-white disabled:bg-stone-400"
               >
-                Planche PDF
+                Générer
               </button>
               <button
                 type="button"

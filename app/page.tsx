@@ -10,11 +10,17 @@ import {
 
 import { LabelPreview } from "@/components/LabelPreview";
 import { ProductForm, type ProductDraft } from "@/components/ProductForm";
+import { PdfPreviewDialog, type PdfPreview } from "@/components/PdfPreviewDialog";
 import { ProductList } from "@/components/ProductList";
 import { SheetMap } from "@/components/SheetMap";
 import { SheetSpecCard } from "@/components/SheetSpecCard";
 import { barPattern } from "@/lib/barcode-modules";
-import { downloadJson, downloadPdf } from "@/lib/download";
+import {
+  createPdfUrl,
+  downloadJson,
+  revokeFileUrl,
+  triggerDownload,
+} from "@/lib/download";
 import { APLI_118990, labelsPerSheet } from "@/lib/label-layout";
 import { buildLabelContent, type MeasureText } from "@/lib/label-render";
 import {
@@ -51,6 +57,7 @@ export default function Page() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [requestedCount, setRequestedCount] = useState(PER_SHEET);
   const [status, setStatus] = useState<Status>(null);
+  const [pdfPreview, setPdfPreview] = useState<PdfPreview | null>(null);
   const [busy, setBusy] = useState(false);
   const importInput = useRef<HTMLInputElement>(null);
 
@@ -121,6 +128,34 @@ export default function Page() {
     setDraft(EMPTY_DRAFT);
   }
 
+  function showPreview(pdf: {
+    bytes: Uint8Array;
+    fileName: string;
+    title: string;
+    summary: string;
+    warnings: readonly string[];
+  }) {
+    // Un seul aperçu à la fois : l'URL précédente est révoquée avant d'en
+    // ouvrir une nouvelle, sinon le blob reste en mémoire jusqu'au rechargement.
+    setPdfPreview((current) => {
+      if (current) revokeFileUrl(current.url);
+      return {
+        url: createPdfUrl(pdf.bytes),
+        fileName: pdf.fileName,
+        title: pdf.title,
+        summary: pdf.summary,
+        warnings: pdf.warnings,
+      };
+    });
+  }
+
+  function closePreview() {
+    setPdfPreview((current) => {
+      if (current) revokeFileUrl(current.url);
+      return null;
+    });
+  }
+
   async function printSheet(code: ResolvedCode, name: string) {
     setBusy(true);
     try {
@@ -132,13 +167,12 @@ export default function Page() {
         count,
         offset: { xMm: settings.offsetXMm, yMm: settings.offsetYMm },
       });
-      downloadPdf(pdf.bytes, pdf.fileName);
-      setStatus({
-        kind: pdf.warnings.length > 0 ? "error" : "info",
-        text: [
-          `${pdf.fileName} — ${pdf.labelCount} étiquette(s) à partir de la n° ${pdf.startIndex + 1}.`,
-          ...pdf.warnings,
-        ].join(" "),
+      showPreview({
+        bytes: pdf.bytes,
+        fileName: pdf.fileName,
+        title: name.trim() || code.value,
+        summary: `${pdf.labelCount} étiquette(s) à partir de la n° ${pdf.startIndex + 1} · ${pdf.fileName}`,
+        warnings: pdf.warnings,
       });
     } catch (error) {
       setStatus({
@@ -160,10 +194,13 @@ export default function Page() {
         xMm: settings.offsetXMm,
         yMm: settings.offsetYMm,
       });
-      downloadPdf(pdf.bytes, pdf.fileName);
-      setStatus({
-        kind: "info",
-        text: "Planche de calibration téléchargée : imprimer sur papier ordinaire et superposer au support.",
+      showPreview({
+        bytes: pdf.bytes,
+        fileName: pdf.fileName,
+        title: "Planche de calibration",
+        summary:
+          "À imprimer sur papier ordinaire, puis superposer au support adhésif.",
+        warnings: pdf.warnings,
       });
     } finally {
       setBusy(false);
@@ -331,7 +368,7 @@ export default function Page() {
                 onClick={() => void printSheet(resolution.code, draft.name)}
                 className="mt-4 rounded-md bg-stone-900 px-4 py-2 text-sm font-medium text-white disabled:bg-stone-400"
               >
-                Télécharger la planche PDF
+                Générer la planche
               </button>
             ) : null}
           </section>
@@ -502,6 +539,14 @@ export default function Page() {
           </section>
         </aside>
       </div>
+
+      <PdfPreviewDialog
+        preview={pdfPreview}
+        onClose={closePreview}
+        onDownload={() => {
+          if (pdfPreview) triggerDownload(pdfPreview.url, pdfPreview.fileName);
+        }}
+      />
     </main>
   );
 }
