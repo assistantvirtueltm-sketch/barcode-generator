@@ -39,10 +39,16 @@ import {
   type StoredProduct,
 } from "@/lib/storage";
 import { resolveCode, type ResolvedCode } from "@/lib/symbology";
+import { xDimensionRule } from "@/lib/x-dimension";
 
 const SPEC = APLI_118990;
 const PER_SHEET = labelsPerSheet(SPEC);
-const EMPTY_DRAFT: ProductDraft = { name: "", input: "", symbology: "auto" };
+const EMPTY_DRAFT: ProductDraft = {
+  name: "",
+  input: "",
+  symbology: "auto",
+  barcodeOnly: false,
+};
 
 type Status = { kind: "info" | "error"; text: string } | null;
 
@@ -85,11 +91,13 @@ export default function Page() {
         name: draft.name,
         humanReadable: resolution.code.humanReadable,
         measure,
+        showName: !draft.barcodeOnly,
+        showHumanReadable: !draft.barcodeOnly,
       });
     } catch {
       return null;
     }
-  }, [resolution, draft.name, measure]);
+  }, [resolution, draft.name, draft.barcodeOnly, measure]);
 
   function updateSettings(patch: Partial<LibrarySettings>) {
     updateLibrary((current) => ({
@@ -156,7 +164,11 @@ export default function Page() {
     });
   }
 
-  async function printSheet(code: ResolvedCode, name: string) {
+  async function printSheet(
+    code: ResolvedCode,
+    name: string,
+    barcodeOnly: boolean,
+  ) {
     setBusy(true);
     try {
       const pdf = await buildSheetPdf({
@@ -165,6 +177,7 @@ export default function Page() {
         spec: SPEC,
         startIndex,
         count,
+        barcodeOnly,
         offset: { xMm: settings.offsetXMm, yMm: settings.offsetYMm },
       });
       showPreview({
@@ -213,7 +226,11 @@ export default function Page() {
       setStatus({ kind: "error", text: productResolution.error });
       return;
     }
-    void printSheet(productResolution.code, product.name);
+    void printSheet(
+      productResolution.code,
+      product.name,
+      product.barcodeOnly,
+    );
   }
 
   function removeProduct(product: StoredProduct) {
@@ -341,8 +358,13 @@ export default function Page() {
                   <div className="flex gap-2">
                     <dt>X-dimension</dt>
                     <dd className="font-mono">
-                      {preview.moduleMm.toFixed(3)} mm (
-                      {Math.round(preview.magnification * 100)} %)
+                      {preview.moduleMm.toFixed(3)} mm
+                      {/* Le grossissement ne se rapporte qu'au nominal EAN :
+                          l'afficher pour un Code 128 n'aurait pas de sens. */}
+                      {resolution.ok &&
+                      xDimensionRule(resolution.code.symbology).hasMagnification
+                        ? ` (${Math.round(preview.magnification * 100)} %)`
+                        : ""}
                     </dd>
                   </div>
                   <div className="flex gap-2">
@@ -364,8 +386,14 @@ export default function Page() {
             {resolution.ok ? (
               <button
                 type="button"
-                disabled={busy || !preview}
-                onClick={() => void printSheet(resolution.code, draft.name)}
+                disabled={busy || !preview || preview.belowMinimum}
+                onClick={() =>
+                  void printSheet(
+                    resolution.code,
+                    draft.name,
+                    draft.barcodeOnly,
+                  )
+                }
                 className="mt-4 rounded-md bg-stone-900 px-4 py-2 text-sm font-medium text-white disabled:bg-stone-400"
               >
                 Générer la planche
@@ -385,6 +413,7 @@ export default function Page() {
                   name: product.name,
                   input: product.input,
                   symbology: product.symbology,
+                  barcodeOnly: product.barcodeOnly,
                 })
               }
               onEdit={(product) => {
@@ -393,6 +422,7 @@ export default function Page() {
                   name: product.name,
                   input: product.input,
                   symbology: product.symbology,
+                  barcodeOnly: product.barcodeOnly,
                 });
               }}
               onRemove={removeProduct}

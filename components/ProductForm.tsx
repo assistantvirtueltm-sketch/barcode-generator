@@ -15,6 +15,8 @@ export interface ProductDraft {
   name: string;
   input: string;
   symbology: SymbologyChoice;
+  /** N'imprimer que les barres : ni libellé, ni ligne lisible. */
+  barcodeOnly: boolean;
 }
 
 interface ProductFormProps {
@@ -108,6 +110,24 @@ export function ProductForm({
           </select>
         </div>
       </div>
+
+      <label className="flex items-start gap-2 text-sm text-stone-700">
+        <input
+          type="checkbox"
+          checked={draft.barcodeOnly}
+          onChange={(event) =>
+            onChange({ ...draft, barcodeOnly: event.target.checked })
+          }
+          className="mt-0.5"
+        />
+        <span>
+          N&apos;imprimer que le code-barres
+          <span className="block text-xs text-stone-500">
+            Masque le libellé et la ligne de chiffres ; les barres occupent
+            toute la hauteur de l&apos;étiquette.
+          </span>
+        </span>
+      </label>
 
       <div aria-live="polite" className="min-h-10 text-sm">
         {draft.input.trim().length === 0 ? (

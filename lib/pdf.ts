@@ -72,6 +72,11 @@ export interface SheetJob {
   /** Nombre d'étiquettes ; par défaut, jusqu'au bas de la planche. */
   count?: number;
   offset?: PrintOffsetMm;
+  /**
+   * N'imprimer que les barres : ni libellé, ni ligne lisible. Les barres
+   * récupèrent toute la hauteur utile de l'étiquette.
+   */
+  barcodeOnly?: boolean;
 }
 
 export interface GeneratedPdf {
@@ -112,7 +117,19 @@ export async function buildSheetPdf(job: SheetJob): Promise<GeneratedPdf> {
     name: safeName.text,
     humanReadable: job.code.humanReadable,
     measure: measurerFor(fonts),
+    showName: !job.barcodeOnly,
+    showHumanReadable: !job.barcodeOnly,
   });
+
+  // Garde-fou : sous le plancher de lisibilité, le symbole ne sera pas lu de
+  // façon fiable. Mieux vaut refuser que gâcher une planche de support.
+  if (content.belowMinimum) {
+    throw new Error(
+      `Code trop dense pour ce support : barres de ${content.moduleMm.toFixed(3)} mm, ` +
+        `sous le plancher de ${content.minimumModuleMm.toFixed(3)} mm. ` +
+        `Raccourcir le code, ou utiliser un support plus large.`,
+    );
+  }
 
   const page = doc.addPage([mmToPt(A4_MM.widthMm), mmToPt(A4_MM.heightMm)]);
   const pageHeightPt = page.getHeight();

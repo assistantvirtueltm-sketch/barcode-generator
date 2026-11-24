@@ -92,6 +92,10 @@ export interface BuildLabelContentInput {
   /** Chaîne lisible imprimée sous les barres. */
   humanReadable: string;
   measure: MeasureText;
+  /** Imprimer le libellé au-dessus des barres (défaut : oui). */
+  showName?: boolean;
+  /** Imprimer la ligne lisible sous les barres (défaut : oui). */
+  showHumanReadable?: boolean;
 }
 
 export function buildLabelContent({
@@ -100,6 +104,8 @@ export function buildLabelContent({
   name,
   humanReadable,
   measure,
+  showName = true,
+  showHumanReadable = true,
 }: BuildLabelContentInput): LabelContent {
   const style = LABEL_STYLE;
   const warnings: string[] = [];
@@ -107,15 +113,16 @@ export function buildLabelContent({
   const innerWidthMm = spec.labelWidthMm - 2 * style.paddingXMm;
   const innerHeightMm = spec.labelHeightMm - 2 * style.paddingYMm;
 
-  const hasName = name.trim().length > 0;
+  // Chaque bande masquée rend sa hauteur aux barres : en mode « code-barres
+  // seul », elles occupent toute la hauteur utile de l'étiquette.
+  const hasName = showName && name.trim().length > 0;
+  const hasHumanReadable = showHumanReadable && humanReadable.trim().length > 0;
   const nameBandMm = hasName ? style.nameBandMm : 0;
   const gapNameMm = hasName ? style.gapNameBarcodeMm : 0;
+  const digitsBandMm = hasHumanReadable ? style.digitsBandMm : 0;
+  const gapDigitsMm = hasHumanReadable ? style.gapBarcodeDigitsMm : 0;
   const barsHeightMm =
-    innerHeightMm -
-    nameBandMm -
-    gapNameMm -
-    style.gapBarcodeDigitsMm -
-    style.digitsBandMm;
+    innerHeightMm - nameBandMm - gapNameMm - gapDigitsMm - digitsBandMm;
 
   if (barsHeightMm <= 0) {
     throw new Error(
@@ -123,15 +130,27 @@ export function buildLabelContent({
     );
   }
 
-  // X-dimension : celle visée si elle rentre, sinon réduite pour que le code et
-  // ses zones de silence tiennent dans la largeur utile. Le plancher dépend de
-  // la symbologie : comparer un Code 128 au nominal EAN n'a pas de sens.
+  // X-dimension. Le plancher dépend de la symbologie : comparer un Code 128 au
+  // nominal EAN n'a pas de sens.
+  //
+  // Les zones de silence ne sont PAS prélevées sur la largeur imprimable :
+  // elles sont assurées par le papier blanc autour des barres. Les planches
+  // étant mono-produit, l'impression la plus proche à droite d'un code est le
+  // code de l'étiquette voisine, à un pas de distance — le blanc intermédiaire
+  // sert de zone de silence aux deux. Deux contraintes, donc :
+  //   1. les barres tiennent dans la zone imprimable (marges de sécurité
+  //      comprises, pour absorber la dérive d'impression et la tolérance de
+  //      découpe) ;
+  //   2. le blanc jusqu'au code voisin couvre la zone de silence normative.
   const rule = xDimensionRule(pattern.symbology);
-  const totalWithQuietModules =
-    pattern.totalModules + pattern.quietLeftModules + pattern.quietRightModules;
+  const maxQuietModules = Math.max(
+    pattern.quietLeftModules,
+    pattern.quietRightModules,
+  );
   const moduleMm = Math.min(
     rule.targetMm,
-    innerWidthMm / totalWithQuietModules,
+    innerWidthMm / pattern.totalModules,
+    spec.columnPitchMm / (pattern.totalModules + maxQuietModules),
   );
   const magnification = moduleMm / rule.targetMm;
   const belowMinimum = moduleMm < rule.minimumMm;
@@ -145,9 +164,10 @@ export function buildLabelContent({
     );
   }
 
-  const blockWidthMm = totalWithQuietModules * moduleMm;
-  const blockXMm = (spec.labelWidthMm - blockWidthMm) / 2;
-  const barsXMm = blockXMm + pattern.quietLeftModules * moduleMm;
+  // Les barres sont centrées sur l'étiquette : le blanc restant se répartit
+  // également de part et d'autre et alimente les zones de silence.
+  const barsWidthMm = pattern.totalModules * moduleMm;
+  const barsXMm = (spec.labelWidthMm - barsWidthMm) / 2;
 
   // Par construction, les bandes remplissent exactement la hauteur utile :
   // titre + barres + chiffres = innerHeightMm.
@@ -159,6 +179,12 @@ export function buildLabelContent({
     widthMm: bar.widthModules * moduleMm,
     heightMm: barsHeightMm,
   }));
+
+  if (!hasHumanReadable && pattern.symbology !== "code128") {
+    warnings.push(
+      "Ligne lisible masquée : sur un EAN/UPC destiné à la vente, cette mention est normative. Acceptable pour un usage interne.",
+    );
+  }
 
   const texts: LabelText[] = [];
 
@@ -185,7 +211,7 @@ export function buildLabelContent({
     });
   }
 
-  if (humanReadable.trim().length > 0) {
+  if (hasHumanReadable) {
     const fitted = fitFontSize(
       humanReadable,
       innerWidthMm,
@@ -196,8 +222,7 @@ export function buildLabelContent({
     );
     texts.push({
       xMm: (spec.labelWidthMm - fitted.widthMm) / 2,
-      baselineYMm:
-        barsTopMm + barsHeightMm + style.gapBarcodeDigitsMm + style.digitsBandMm - 0.5,
+      baselineYMm: barsTopMm + barsHeightMm + gapDigitsMm + digitsBandMm - 0.5,
       sizePt: fitted.sizePt,
       text: fitted.text,
       bold: false,

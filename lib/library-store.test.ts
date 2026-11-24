@@ -17,6 +17,7 @@ function product(name: string, input: string): StoredProduct {
     name,
     input,
     symbology: "auto",
+    barcodeOnly: false,
     createdAt: now,
     updatedAt: now,
   };

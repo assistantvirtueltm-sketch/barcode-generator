@@ -34,6 +34,7 @@ describe("migrate", () => {
       name: "Café",
       input: "5901234123457",
       symbology: "auto",
+      barcodeOnly: false,
       createdAt: "2026-01-01T00:00:00.000Z",
       updatedAt: "2026-01-01T00:00:00.000Z",
     });
@@ -69,6 +70,21 @@ describe("migrate", () => {
     expect(dropped).toBe(3);
     expect(library.products).toHaveLength(1);
     expect(library.products[0].name).toBe("Bon");
+  });
+
+  it("met le mode code-barres seul à faux quand il manque, et le conserve sinon", () => {
+    const { library } = migrate({
+      products: [
+        { name: "Ancien", input: "5901234123457" },
+        { name: "Parking", input: "465748999010001000", barcodeOnly: true },
+        { name: "Douteux", input: "96385074", barcodeOnly: "oui" },
+      ],
+    });
+    expect(library.products.map((p) => p.barcodeOnly)).toEqual([
+      false,
+      true,
+      false,
+    ]);
   });
 
   it("normalise les réglages et rejette les valeurs aberrantes", () => {
@@ -143,6 +159,7 @@ describe("parseImport", () => {
       name: "Miel",
       input: "036000291452",
       symbology: "upca",
+      barcodeOnly: false,
       createdAt: "2026-01-01T00:00:00.000Z",
       updatedAt: "2026-01-01T00:00:00.000Z",
     });

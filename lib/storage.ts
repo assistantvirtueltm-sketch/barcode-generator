@@ -18,6 +18,8 @@ export interface StoredProduct {
   input: string;
   /** Type choisi par l'utilisateur, « auto » compris. */
   symbology: SymbologyChoice;
+  /** N'imprimer que les barres : ni libellé, ni ligne lisible. */
+  barcodeOnly: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -91,6 +93,7 @@ function migrateProduct(raw: unknown): StoredProduct | null {
     name: asString(record.name ?? record.label ?? record.description),
     input,
     symbology,
+    barcodeOnly: record.barcodeOnly === true,
     createdAt: asString(record.createdAt, now),
     updatedAt: asString(record.updatedAt, now),
   };

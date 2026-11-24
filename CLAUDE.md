@@ -67,9 +67,22 @@ saisie ──▶ symbology.ts       validation / détection du type / clé de co
 - `lib/barcode-modules.ts` — n'utilise **que** `bwipjs.raw()` (sous-chemin
   `bwip-js/browser`) : `sbs` est la suite des largeurs en modules commençant par
   une barre. On ne charge aucune police bwip-js et on ne rastérise rien.
-- `lib/label-render.ts` — décide de la X-dimension : nominale (0,33 mm) si elle
-  rentre, sinon réduite pour que le code **et ses zones de silence** tiennent
-  dans la largeur utile ; expose le grossissement et avertit sous 0,25 mm.
+- `lib/x-dimension.ts` — plancher de lisibilité **par symbologie** : 0,264 mm
+  pour les EAN/UPC (80 % du nominal de 0,330 mm), 0,25 mm pour le Code 128
+  (lecture de proximité). Comparer un Code 128 au nominal EAN n'a pas de sens :
+  le pourcentage de grossissement n'est affiché que si `hasMagnification`.
+- `lib/label-render.ts` — décide de la X-dimension sous **deux** contraintes :
+  les barres tiennent dans la largeur imprimable (marges de sécurité comprises),
+  et le blanc jusqu'au code voisin couvre la zone de silence normative. Les
+  zones de silence **ne sont pas prélevées sur la largeur imprimable** : les
+  planches étant mono-produit, l'impression la plus proche d'un code est le code
+  de l'étiquette suivante, à un pas de distance, et le blanc intermédiaire sert
+  aux deux. Les prélever en plus des marges coûtait 15 % de X-dimension et
+  refusait des codes qui s'impriment correctement depuis des années.
+  Expose `belowMinimum` ; `buildSheetPdf` refuse alors de générer, et l'UI
+  désactive le bouton. Les bandes « libellé » et « ligne lisible » sont
+  optionnelles (`showName`, `showHumanReadable`) et rendent leur hauteur aux
+  barres : 11,9 → 18,8 mm en mode code-barres seul.
   Mesure les textes via une fonction injectée (`MeasureText`) pour rester pur.
 - `lib/pdf.ts` — fournit ce mesureur depuis les métriques Helvetica de pdf-lib,
   **partagé avec l'aperçu** : l'écran et le papier ont la même mise en page au
@@ -100,6 +113,10 @@ saisie ──▶ symbology.ts       validation / détection du type / clé de co
   trame de modules depuis les rectangles millimétrés puis **décode** le résultat
   avec les tables EAN normatives. Un changement de mise en page qui casse la
   lisibilité du code y échoue. L'étendre plutôt que le contourner.
+- Un retour terrain (« ce code s'imprime depuis des années sur ce support »)
+  prime sur une règle déduite d'une norme : c'est ce qui a révélé que le modèle
+  de zone de silence était trop conservateur. Vérifier le calcul avant de
+  conclure qu'un code ne tient pas.
 - Les tests tournent en environnement node : pour du code qui touche au
   `localStorage`, stubber `window` (`vi.stubGlobal`) comme dans
   `lib/storage.test.ts`.

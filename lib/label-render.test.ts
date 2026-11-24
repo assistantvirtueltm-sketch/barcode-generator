@@ -59,17 +59,14 @@ describe("buildLabelContent", () => {
       expect(bar.yMm + bar.heightMm).toBeLessThanOrEqual(spec.labelHeightMm);
     }
 
-    const firstBar = content.bars[0];
-    const lastBar = content.bars.at(-1)!;
-    // Les zones de silence normatives tiennent dans l'étiquette.
-    expect(
-      firstBar.xMm - pattern.quietLeftModules * content.moduleMm,
-    ).toBeGreaterThanOrEqual(-1e-9);
-    expect(
-      lastBar.xMm +
-        lastBar.widthMm +
-        pattern.quietRightModules * content.moduleMm,
-    ).toBeLessThanOrEqual(spec.labelWidthMm + 1e-9);
+    // Zone de silence : le blanc jusqu'au code de l'étiquette voisine (un pas
+    // de distance, planches mono-produit) couvre ce que la norme exige.
+    const barsWidthMm = pattern.totalModules * content.moduleMm;
+    const clearToNeighbourMm = spec.columnPitchMm - barsWidthMm;
+    const quietNeededMm =
+      Math.max(pattern.quietLeftModules, pattern.quietRightModules) *
+      content.moduleMm;
+    expect(clearToNeighbourMm).toBeGreaterThanOrEqual(quietNeededMm - 1e-9);
   });
 
   it("reste au-dessus du grossissement minimal de 80 % pour un EAN-13", () => {

@@ -155,6 +155,43 @@ describe("buildSheetPdf", () => {
   });
 });
 
+describe("mode code-barres seul", () => {
+  it("rend aux barres la hauteur du libellé et des chiffres", async () => {
+    const complet = await buildSheetPdf({
+      code: code("5901234123457"),
+      name: "Café moulu arabica 250 g",
+    });
+    const barresSeules = await buildSheetPdf({
+      code: code("5901234123457"),
+      name: "Café moulu arabica 250 g",
+      barcodeOnly: true,
+    });
+    const content = contentStreams(barresSeules.bytes);
+    // Plus aucun texte, et toujours 30 barres par étiquette.
+    expect(countOps(content, /Tj/g)).toBe(0);
+    expect(countOps(content, /\nf\n/g)).toBe(30 * 65);
+    expect(countOps(contentStreams(complet.bytes), /Tj/g)).toBe(2 * 65);
+  });
+
+  it("refuse un code trop dense pour le support", async () => {
+    await expect(
+      buildSheetPdf({
+        code: code("REFERENCE-INTERNE-2026-000123456789"),
+        name: "Pièce",
+      }),
+    ).rejects.toThrow(/trop dense/);
+  });
+
+  it("accepte le Code 128 de 18 chiffres du support parking", async () => {
+    const pdf = await buildSheetPdf({
+      code: code("465748999010001000"),
+      name: "PARKING",
+    });
+    expect(pdf.labelCount).toBe(65);
+    expect(pdf.warnings).toEqual([]);
+  });
+});
+
 describe("buildCalibrationPdf", () => {
   it("trace les 65 emplacements numérotés", async () => {
     const pdf = await buildCalibrationPdf(spec, { xMm: 0.5, yMm: -0.5 });
