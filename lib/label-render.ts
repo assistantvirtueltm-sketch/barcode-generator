@@ -8,6 +8,7 @@
  */
 import type { BarPattern } from "./barcode-modules";
 import { LABEL_STYLE, ptToMm, type SheetSpec } from "./label-layout";
+import { xDimensionRule } from "./x-dimension";
 
 /** Largeur d'un texte en points, à la taille et à la graisse demandées. */
 export type MeasureText = (
@@ -41,8 +42,16 @@ export interface LabelContent {
   texts: readonly LabelText[];
   /** X-dimension retenue. */
   moduleMm: number;
-  /** Grossissement par rapport à la X-dimension nominale (1 = 100 %). */
+  /** Plancher de lisibilité de la symbologie. */
+  minimumModuleMm: number;
+  /** Grossissement par rapport à la X-dimension visée (1 = 100 %). */
   magnification: number;
+  /**
+   * Les barres sont plus fines que le plancher : le code ne sera pas lu de
+   * façon fiable, quelle que soit la qualité de l'encodage. La génération du
+   * PDF le refuse (voir `lib/pdf.ts`).
+   */
+  belowMinimum: boolean;
   warnings: readonly string[];
 }
 
@@ -114,19 +123,25 @@ export function buildLabelContent({
     );
   }
 
-  // X-dimension : nominale si elle rentre, sinon réduite pour que le code et
-  // ses zones de silence tiennent dans la largeur utile.
+  // X-dimension : celle visée si elle rentre, sinon réduite pour que le code et
+  // ses zones de silence tiennent dans la largeur utile. Le plancher dépend de
+  // la symbologie : comparer un Code 128 au nominal EAN n'a pas de sens.
+  const rule = xDimensionRule(pattern.symbology);
   const totalWithQuietModules =
     pattern.totalModules + pattern.quietLeftModules + pattern.quietRightModules;
   const moduleMm = Math.min(
-    style.nominalModuleMm,
+    rule.targetMm,
     innerWidthMm / totalWithQuietModules,
   );
-  const magnification = moduleMm / style.nominalModuleMm;
+  const magnification = moduleMm / rule.targetMm;
+  const belowMinimum = moduleMm < rule.minimumMm;
 
-  if (moduleMm < style.thinModuleWarnMm) {
+  if (belowMinimum) {
+    const mesure = rule.hasMagnification
+      ? `${moduleMm.toFixed(3)} mm, ${Math.round(magnification * 100)} % du nominal`
+      : `${moduleMm.toFixed(3)} mm`;
     warnings.push(
-      `Barres très fines (${moduleMm.toFixed(3)} mm, ${Math.round(magnification * 100)} % du nominal) : vérifier la lecture avant d'imprimer une planche entière.`,
+      `Code trop dense pour cette étiquette : barres de ${mesure}, sous le plancher de ${rule.minimumMm.toFixed(3)} mm (${rule.reference}). Raccourcir le code, ou utiliser un support plus large.`,
     );
   }
 
@@ -190,5 +205,13 @@ export function buildLabelContent({
     });
   }
 
-  return { bars, texts, moduleMm, magnification, warnings };
+  return {
+    bars,
+    texts,
+    moduleMm,
+    minimumModuleMm: rule.minimumMm,
+    magnification,
+    belowMinimum,
+    warnings,
+  };
 }

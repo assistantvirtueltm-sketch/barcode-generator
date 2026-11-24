@@ -215,8 +215,4 @@ export const LABEL_STYLE = {
   nameMinPt: 4.5,
   digitsMaxPt: 6.5,
   digitsMinPt: 4,
-  /** X-dimension nominale d'un EAN-13 à 100 % de grossissement. */
-  nominalModuleMm: 0.33,
-  /** Sous ce seuil, les barres deviennent risquées à l'impression jet d'encre. */
-  thinModuleWarnMm: 0.25,
 } as const;

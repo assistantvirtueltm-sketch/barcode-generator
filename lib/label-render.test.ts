@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { barPattern } from "./barcode-modules";
 import { APLI_118990, LABEL_STYLE } from "./label-layout";
+import { EAN_NOMINAL_MM, xDimensionRule } from "./x-dimension";
 import { buildLabelContent } from "./label-render";
 import { createMeasurer } from "./pdf";
 import { resolveCode, type Symbology } from "./symbology";
@@ -75,13 +76,14 @@ describe("buildLabelContent", () => {
     const { content } = contentFor("5901234123457", "Produit");
     expect(content.magnification).toBeGreaterThanOrEqual(0.8);
     expect(content.magnification).toBeLessThanOrEqual(1);
-    expect(content.moduleMm).toBeGreaterThan(LABEL_STYLE.thinModuleWarnMm);
+    expect(content.moduleMm).toBeGreaterThan(xDimensionRule("ean13").minimumMm);
+    expect(content.belowMinimum).toBe(false);
     expect(content.warnings).toEqual([]);
   });
 
   it("plafonne la X-dimension au nominal quand la place le permet", () => {
     const { content } = contentFor("96385074", "Petit code");
-    expect(content.moduleMm).toBeCloseTo(LABEL_STYLE.nominalModuleMm, 10);
+    expect(content.moduleMm).toBeCloseTo(EAN_NOMINAL_MM, 10);
     expect(content.magnification).toBeCloseTo(1, 10);
   });
 
@@ -125,13 +127,18 @@ describe("buildLabelContent", () => {
     expect(content.warnings.join(" ")).toContain("tronqué");
   });
 
-  it("alerte quand un Code 128 rend les barres trop fines", () => {
+  it("signale un Code 128 sous le plancher de lisibilité", () => {
     const { content } = contentFor(
       "REFERENCE-INTERNE-2026-000123456789",
       "Pièce détachée",
       "code128",
     );
-    expect(content.moduleMm).toBeLessThan(LABEL_STYLE.thinModuleWarnMm);
-    expect(content.warnings.join(" ")).toContain("Barres très fines");
+    const rule = xDimensionRule("code128");
+    expect(content.moduleMm).toBeLessThan(rule.minimumMm);
+    expect(content.belowMinimum).toBe(true);
+    expect(content.minimumModuleMm).toBe(rule.minimumMm);
+    expect(content.warnings.join(" ")).toContain("trop dense");
+    // Le Code 128 n'est pas comparé au nominal EAN, qui ne le concerne pas.
+    expect(content.warnings.join(" ")).not.toContain("% du nominal");
   });
 });
